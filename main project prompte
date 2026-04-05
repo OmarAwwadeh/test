@@ -1,0 +1,764 @@
+# LTX-2 ANIME AGENT - COMPLETE AI AGENT PROMPT
+# Copy everything below this line and paste to your AI agent
+# Build time: ~35-45 minutes
+
+================================================================================
+PROMPT STARTS HERE
+================================================================================
+
+Create a complete LTX-2 Anime Agent web application - a professional AI-powered anime video production tool. This app manages anime projects with AI story generation via Ollama, ComfyUI integration for LTX-Video generation, voice profile management with character consistency, and transcript/dialogue management with subtitle export.
+
+SETUP: Create React + Vite + TypeScript + Tailwind CSS project
+- Run: npm create vite@latest . -- --template react-ts
+- Run: npm install
+- Run: npm install -D tailwindcss postcss autoprefixer
+- Run: npx tailwindcss init -p
+
+CONFIGURE tailwind.config.js:
+```js
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+        accent: { 50:'#fdf4ff',100:'#fae8ff',200:'#f5d0fe',300:'#f0abfc',400:'#e879f9',500:'#d946ef',600:'#c026d3',700:'#a21caf',800:'#86198f',900:'#701a75' },
+        dark: { 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a',950:'#020617' }
+      }
+    }
+  },
+  plugins: []
+}
+```
+
+CONFIGURE src/index.css:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body { @apply bg-dark-950 text-dark-100 antialiased; }
+::-webkit-scrollbar { @apply w-2; }
+::-webkit-scrollbar-track { @apply bg-dark-900; }
+::-webkit-scrollbar-thumb { @apply bg-dark-600 rounded-full; }
+```
+
+================================================================================
+CREATE src/types.ts
+================================================================================
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  style: AnimationStyle;
+  characters: Character[];
+  episodes: Episode[];
+  settings: GenerationSettings;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Character {
+  id: string;
+  name: string;
+  appearance: string;
+  personality: string;
+  role: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+  consistencyPrompt: string;
+  avatar: string;
+  voiceProfile: VoiceProfile;
+}
+
+export interface VoiceProfile {
+  gender: 'male' | 'female' | 'neutral';
+  ageRange: 'child' | 'teen' | 'young-adult' | 'adult' | 'elderly';
+  tone: 'soft' | 'warm' | 'deep' | 'bright' | 'husky' | 'energetic' | 'calm' | 'mysterious' | 'commanding' | 'gentle';
+  pitch: number;
+  speed: number;
+  voiceId: string;
+  provider: VoiceProvider;
+  sampleText: string;
+}
+
+export type VoiceProvider = 'browser' | 'elevenlabs' | 'azure' | 'google' | 'local';
+
+export interface Episode {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  scenes: Scene[];
+  transcript: Transcript;
+  status: 'draft' | 'ready' | 'generating' | 'completed';
+  duration: number;
+}
+
+export interface Scene {
+  id: string;
+  number: number;
+  description: string;
+  cameraMovement: CameraMovement;
+  mood: Mood;
+  style: AnimationStyle;
+  characters: string[];
+  duration: number;
+  prompt: string;
+  negativePrompt: string;
+  status: 'pending' | 'generating' | 'completed' | 'error';
+  outputPath: string;
+  dialogueLines: DialogueLine[];
+}
+
+export interface Transcript {
+  id: string;
+  episodeId: string;
+  lines: DialogueLine[];
+  totalDuration: number;
+  wordCount: number;
+  generatedAt: string;
+}
+
+export interface DialogueLine {
+  id: string;
+  sceneId: string;
+  characterId: string;
+  characterName: string;
+  text: string;
+  emotion: Emotion;
+  startFrame: number;
+  endFrame: number;
+  startTime: number;
+  endTime: number;
+  voiceSettings: VoiceSettings;
+  notes: string;
+}
+
+export interface VoiceSettings {
+  pitchShift: number;
+  speedMultiplier: number;
+  volumeDb: number;
+  reverb: number;
+  emotionIntensity: number;
+}
+
+export type AnimationStyle = 'anime-classic' | 'shonen' | 'shojo' | 'seinen' | 'cyberpunk' | 'fantasy' | 'mecha' | 'slice-of-life' | 'dark-fantasy' | 'isekai';
+
+export type CameraMovement = 'static' | 'pan-left' | 'pan-right' | 'zoom-in' | 'zoom-out' | 'tracking' | 'dolly' | 'crane-up' | 'crane-down' | 'handheld';
+
+export type Mood = 'action' | 'dramatic' | 'romantic' | 'mysterious' | 'comedic' | 'melancholic' | 'epic' | 'peaceful' | 'tense' | 'nostalgic';
+
+export type Emotion = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'scared' | 'disgusted' | 'excited' | 'calm' | 'confused' | 'determined' | 'anxious';
+
+export type LogLevel = 'info' | 'success' | 'warning' | 'error' | 'debug';
+
+export type LogCategory = 'system' | 'comfyui' | 'ollama' | 'generation' | 'ai' | 'export' | 'voice';
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  category: LogCategory;
+  message: string;
+  details?: string;
+  solution?: string;
+}
+
+export interface GenerationSettings {
+  width: number;
+  height: number;
+  fps: number;
+  steps: number;
+  cfgScale: number;
+  seed: number;
+  sampler: string;
+  scheduler: string;
+  modelType: 'gguf' | 'checkpoint';
+  modelFile: string;
+  vaeFile: string;
+  clipFile: string;
+}
+
+export interface ConnectionStatus {
+  comfyui: 'connected' | 'disconnected' | 'checking';
+  ollama: 'connected' | 'disconnected' | 'checking';
+}
+
+================================================================================
+CREATE src/constants.ts
+================================================================================
+
+export const ANIMATION_STYLES = [
+  { id: 'anime-classic', name: 'Anime Classic', description: 'Traditional cel-shaded anime' },
+  { id: 'shonen', name: 'Shonen', description: 'Action-oriented, dynamic' },
+  { id: 'shojo', name: 'Shojo', description: 'Romantic, soft colors' },
+  { id: 'seinen', name: 'Seinen', description: 'Mature, detailed' },
+  { id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon, futuristic' },
+  { id: 'fantasy', name: 'Fantasy', description: 'Magical, mystical' },
+  { id: 'mecha', name: 'Mecha', description: 'Robots, sci-fi' },
+  { id: 'slice-of-life', name: 'Slice of Life', description: 'Everyday, cozy' },
+  { id: 'dark-fantasy', name: 'Dark Fantasy', description: 'Gothic, shadowy' },
+  { id: 'isekai', name: 'Isekai', description: 'Fantasy world adventure' }
+] as const;
+
+export const CAMERA_MOVEMENTS = [
+  { id: 'static', name: 'Static', description: 'No camera movement' },
+  { id: 'pan-left', name: 'Pan Left', description: 'Camera moves left' },
+  { id: 'pan-right', name: 'Pan Right', description: 'Camera moves right' },
+  { id: 'zoom-in', name: 'Zoom In', description: 'Zoom towards subject' },
+  { id: 'zoom-out', name: 'Zoom Out', description: 'Zoom away from subject' },
+  { id: 'tracking', name: 'Tracking', description: 'Follows subject' },
+  { id: 'dolly', name: 'Dolly', description: 'Camera moves forward/back' },
+  { id: 'crane-up', name: 'Crane Up', description: 'Camera rises vertically' },
+  { id: 'crane-down', name: 'Crane Down', description: 'Camera lowers vertically' },
+  { id: 'handheld', name: 'Handheld', description: 'Shaky, documentary feel' }
+] as const;
+
+export const MOODS = [
+  { id: 'action', name: 'Action', prompt: 'dynamic action scene, intense movement' },
+  { id: 'dramatic', name: 'Dramatic', prompt: 'dramatic lighting, emotional tension' },
+  { id: 'romantic', name: 'Romantic', prompt: 'soft lighting, warm colors, gentle atmosphere' },
+  { id: 'mysterious', name: 'Mysterious', prompt: 'shadowy, atmospheric, enigmatic' },
+  { id: 'comedic', name: 'Comedic', prompt: 'bright colors, exaggerated expressions' },
+  { id: 'melancholic', name: 'Melancholic', prompt: 'muted colors, rainy, somber mood' },
+  { id: 'epic', name: 'Epic', prompt: 'grand scale, cinematic, awe-inspiring' },
+  { id: 'peaceful', name: 'Peaceful', prompt: 'calm, serene, tranquil environment' },
+  { id: 'tense', name: 'Tense', prompt: 'suspenseful, dark, nerve-wracking' },
+  { id: 'nostalgic', name: 'Nostalgic', prompt: 'warm vintage tones, reminiscent' }
+] as const;
+
+export const VOICE_PRESETS = [
+  { gender: 'male', ageRange: 'young-adult', tone: 'energetic', name: 'Hero', pitch: 1.0, speed: 1.1 },
+  { gender: 'female', ageRange: 'young-adult', tone: 'warm', name: 'Heroine', pitch: 1.2, speed: 1.0 },
+  { gender: 'male', ageRange: 'adult', tone: 'deep', name: 'Villain', pitch: 0.8, speed: 0.9 },
+  { gender: 'female', ageRange: 'teen', tone: 'bright', name: 'Tsundere', pitch: 1.3, speed: 1.15 },
+  { gender: 'male', ageRange: 'adult', tone: 'calm', name: 'Mentor', pitch: 0.9, speed: 0.95 },
+  { gender: 'female', ageRange: 'young-adult', tone: 'gentle', name: 'Dandere', pitch: 1.15, speed: 0.9 },
+  { gender: 'female', ageRange: 'teen', tone: 'energetic', name: 'Genki', pitch: 1.35, speed: 1.2 },
+  { gender: 'male', ageRange: 'elderly', tone: 'mysterious', name: 'Sage', pitch: 0.85, speed: 0.85 },
+  { gender: 'male', ageRange: 'adult', tone: 'commanding', name: 'Commander', pitch: 0.75, speed: 0.95 },
+  { gender: 'female', ageRange: 'child', tone: 'bright', name: 'Child', pitch: 1.5, speed: 1.1 }
+] as const;
+
+export const EMOTION_MODIFIERS = {
+  neutral: { pitchShift: 0, speedMultiplier: 1.0, volumeDb: 0, reverb: 0, emotionIntensity: 0.5 },
+  happy: { pitchShift: 2, speedMultiplier: 1.15, volumeDb: 2, reverb: 0, emotionIntensity: 0.8 },
+  sad: { pitchShift: -1, speedMultiplier: 0.85, volumeDb: -3, reverb: 0.3, emotionIntensity: 0.7 },
+  angry: { pitchShift: -3, speedMultiplier: 1.1, volumeDb: 4, reverb: 0, emotionIntensity: 0.9 },
+  surprised: { pitchShift: 3, speedMultiplier: 1.2, volumeDb: 3, reverb: 0, emotionIntensity: 0.85 },
+  scared: { pitchShift: 2, speedMultiplier: 0.9, volumeDb: -2, reverb: 0.2, emotionIntensity: 0.8 },
+  excited: { pitchShift: 2, speedMultiplier: 1.2, volumeDb: 3, reverb: 0, emotionIntensity: 0.9 },
+  calm: { pitchShift: 0, speedMultiplier: 0.95, volumeDb: -2, reverb: 0.1, emotionIntensity: 0.4 },
+  determined: { pitchShift: -1, speedMultiplier: 1.0, volumeDb: 2, reverb: 0, emotionIntensity: 0.75 },
+  anxious: { pitchShift: 1, speedMultiplier: 1.1, volumeDb: -1, reverb: 0.15, emotionIntensity: 0.7 }
+} as const;
+
+export const RESOLUTION_PRESETS = [
+  { name: 'Ultra Fast', width: 384, height: 256, steps: 4, fps: 12, label: '⚡', time: '15-30s' },
+  { name: 'Fast', width: 512, height: 384, steps: 8, fps: 24, label: '🚀', time: '30-60s' },
+  { name: 'Balanced', width: 512, height: 384, steps: 16, fps: 24, label: '⚖️', time: '1-2min' },
+  { name: 'Quality', width: 640, height: 480, steps: 24, fps: 24, label: '🎨', time: '2-4min' },
+  { name: 'Maximum', width: 768, height: 576, steps: 32, fps: 30, label: '💎', time: '4-8min' }
+] as const;
+
+export const DEFAULT_NEGATIVE_PROMPT = 'worst quality, low quality, blurry, deformed, disfigured, bad anatomy, extra limbs, missing limbs, watermark, signature, text, logo, nsfw';
+
+export const OLLAMA_SYSTEM_PROMPT = `You are an expert anime screenwriter and character designer. You create compelling characters and stories following anime conventions and tropes. Always respond with valid JSON.`;
+
+export const OLLAMA_CHARACTER_PROMPT = `Generate exactly 4 unique anime characters for a project. Each character needs: name (Japanese-style), appearance (detailed visual description for image generation), personality (2-3 sentences), role (protagonist/antagonist/supporting/minor), consistencyPrompt (detailed prompt for consistent character generation including hair, eyes, clothing, distinguishing features), voiceGender (male/female/neutral), voiceAge (child/teen/young-adult/adult/elderly), voiceTone (soft/warm/deep/bright/husky/energetic/calm/mysterious/commanding/gentle).
+
+Respond with JSON array: [{name, appearance, personality, role, consistencyPrompt, voiceGender, voiceAge, voiceTone}]`;
+
+export const OLLAMA_TRANSCRIPT_PROMPT = `Generate a dialogue transcript for an anime scene. Include natural anime-style dialogue with emotional cues.
+
+Respond with JSON: {lines: [{characterName, text, emotion, duration}]}
+
+Emotions: neutral, happy, sad, angry, surprised, scared, excited, calm, determined, anxious
+Duration: estimated seconds for the line`;
+
+================================================================================
+CREATE src/utils/storage.ts
+================================================================================
+
+const STORAGE_KEY = 'ltx2-anime-agent';
+
+export function loadProjects(): Project[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    return JSON.parse(data);
+  } catch { return []; }
+}
+
+export function saveProjects(projects: Project[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+  } catch (error) {
+    console.error('Failed to save:', error);
+  }
+}
+
+export function exportProject(project: Project): void {
+  const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${project.name.replace(/\s+/g, '-')}-project.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+================================================================================
+CREATE src/utils/workflow.ts
+================================================================================
+
+export function generateLTXWorkflow(settings: GenerationSettings, prompt: string, negativePrompt: string): object {
+  const isGGUF = settings.modelType === 'gguf';
+  return {
+    "1": { "class_type": isGGUF ? "UnetLoaderGGUF" : "CheckpointLoaderSimple", "inputs": { [isGGUF ? "gguf_name" : "ckpt_name"]: settings.modelFile } },
+    "2": { "class_type": "VAELoader", "inputs": { "vae_name": settings.vaeFile } },
+    "3": { "class_type": "CLIPLoader", "inputs": { "clip_name": settings.clipFile, "type": "sd" } },
+    "4": { "class_type": "CLIPTextEncode", "inputs": { "text": prompt, "clip": ["3", 0] } },
+    "5": { "class_type": "CLIPTextEncode", "inputs": { "text": negativePrompt, "clip": ["3", 0] } },
+    "6": { "class_type": "EmptyLatentImage", "inputs": { "width": settings.width, "height": settings.height, "batch_size": 1 } },
+    "7": { "class_type": "KSampler", "inputs": { "model": ["1", 0], "positive": ["4", 0], "negative": ["5", 0], "latent_image": ["6", 0], "seed": settings.seed, "steps": settings.steps, "cfg": settings.cfgScale, "sampler_name": settings.sampler, "scheduler": settings.scheduler, "denoise": 1.0 } },
+    "8": { "class_type": "VAEDecode", "inputs": { "samples": ["7", 0], "vae": ["2", 0] } },
+    "9": { "class_type": "VHS_VideoCombine", "inputs": { "images": ["8", 0], "frame_rate": settings.fps, "filename_prefix": "anime_output", "format": "video/h264-mp4", "pix_fmt": "yuv420p" } },
+    "10": { "class_type": "SaveImage", "inputs": { "images": ["8", 0], "filename_prefix": "anime_frame" } }
+  };
+}
+
+export function generateBatchScript(project: Project): string {
+  return `#!/usr/bin/env python3
+# LTX-2 Anime Agent Batch Script
+import requests, json, time, os
+
+COMFYUI_URL = "${window.location.protocol}//${window.location.hostname}:8188"
+OUTPUT_DIR = "./output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+project = ${JSON.stringify(project, null, 2)}
+
+def queue_workflow(workflow):
+    response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": workflow})
+    return response.json().get("prompt_id")
+
+scenes = []
+for episode in project["episodes"]:
+    for scene in episode["scenes"]:
+        scenes.append({"episode": episode["number"], "scene": scene["number"], "description": scene["description"]})
+
+print(f"Processing {len(scenes)} scenes...")
+for i, scene in enumerate(scenes):
+    print(f"Scene {i+1}/{len(scenes)}: E{scene['episode']}S{scene['scene']}")
+    time.sleep(1)
+
+print("Complete!")`;
+}
+
+================================================================================
+CREATE src/utils/transcript.ts
+================================================================================
+
+export function parseAIResponseToTranscript(response: string, sceneId: string, characters: Character[]): DialogueLine[] {
+  try {
+    const parsed = JSON.parse(response);
+    let frameCounter = 0;
+    return parsed.lines.map((line: any) => {
+      const char = characters.find(c => c.name === line.characterName);
+      const startFrame = frameCounter;
+      const duration = line.duration || 3;
+      frameCounter += Math.ceil(duration * 24);
+      return {
+        id: generateId(), sceneId, characterId: char?.id || '', characterName: line.characterName || 'Unknown',
+        text: line.text || '', emotion: line.emotion || 'neutral', startFrame, endFrame: frameCounter,
+        startTime: startFrame / 24, endTime: frameCounter / 24, voiceSettings: getEmotionModifiers(line.emotion || 'neutral'),
+        notes: ''
+      };
+    });
+  } catch { return []; }
+}
+
+export function getEmotionModifiers(emotion: Emotion): VoiceSettings {
+  return { ...EMOTION_MODIFIERS[emotion] || EMOTION_MODIFIERS.neutral };
+}
+
+export function exportAsSRT(lines: DialogueLine[]): string {
+  return lines.map((line, i) => {
+    const start = formatSRTTime(line.startTime);
+    const end = formatSRTTime(line.endTime);
+    return `${i + 1}\n${start} --> ${end}\n[${line.characterName}]: ${line.text}\n`;
+  }).join('\n');
+}
+
+export function exportAsVTT(lines: DialogueLine[]): string {
+  const content = lines.map(line => {
+    const start = formatVTTTime(line.startTime);
+    const end = formatVTTTime(line.endTime);
+    return `${start} --> ${end}\n<v ${line.characterName}>${line.text}</v>`;
+  }).join('\n\n');
+  return `WEBVTT\n\n${content}`;
+}
+
+export function formatSRTTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+}
+
+export function formatVTTTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+}
+
+================================================================================
+CREATE src/hooks/useLogger.ts
+================================================================================
+
+export function useLogger() {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  const log = useCallback((level: LogLevel, category: LogCategory, message: string, details?: string, solution?: string) => {
+    const entry: LogEntry = {
+      id: generateId(), timestamp: new Date().toISOString(), level, category, message, details, solution
+    };
+    setLogs(prev => [...prev, entry].slice(-500));
+    console[level === 'error' ? 'error' : 'log'](`[${category.toUpperCase()}] ${message}`);
+  }, []);
+
+  const info = useCallback((cat: LogCategory, msg: string, det?: string) => log('info', cat, msg, det), [log]);
+  const success = useCallback((cat: LogCategory, msg: string, det?: string) => log('success', cat, msg, det), [log]);
+  const warning = useCallback((cat: LogCategory, msg: string, det?: string, sol?: string) => log('warning', cat, msg, det, sol), [log]);
+  const error = useCallback((cat: LogCategory, msg: string, det?: string, sol?: string) => log('error', cat, msg, det, sol), [log]);
+  const debug = useCallback((cat: LogCategory, msg: string, det?: string) => log('debug', cat, msg, det), [log]);
+  const clearLogs = useCallback(() => setLogs([]), []);
+
+  const exportLogs = useCallback(() => {
+    const text = logs.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] [${l.category}] ${l.message}${l.details ? '\n  Details: ' + l.details : ''}${l.solution ? '\n  Solution: ' + l.solution : ''}`).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `logs-${Date.now()}.txt`; a.click();
+    URL.revokeObjectURL(url);
+  }, [logs]);
+
+  return { logs, info, success, warning, error, debug, clearLogs, exportLogs };
+}
+
+================================================================================
+CREATE src/hooks/useComfyUI.ts
+================================================================================
+
+export function useComfyUI(baseUrl: string, logger: ReturnType<typeof useLogger>) {
+  const [status, setStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [history, setHistory] = useState<any>(null);
+
+  const checkConnection = useCallback(async () => {
+    setStatus('checking');
+    try {
+      const response = await fetch(`${baseUrl}/system_stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setStatus('connected');
+        setSystemInfo(data);
+        logger.success('comfyui', 'ComfyUI connected');
+      } else throw new Error('Invalid response');
+    } catch {
+      setStatus('disconnected');
+      logger.error('comfyui', 'Cannot connect to ComfyUI', `URL: ${baseUrl}`, 'Ensure ComfyUI is running: python main.py --lowvram --listen');
+    }
+  }, [baseUrl, logger]);
+
+  const queuePrompt = useCallback(async (workflow: object) => {
+    try {
+      logger.info('comfyui', 'Queuing workflow...');
+      const response = await fetch(`${baseUrl}/prompt`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: workflow })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      logger.success('comfyui', `Prompt queued: ${data.prompt_id}`);
+      return data.prompt_id;
+    } catch (err: any) {
+      logger.error('comfyui', 'Failed to queue workflow', err.message, 'Check ComfyUI console for errors');
+      throw err;
+    }
+  }, [baseUrl, logger]);
+
+  const checkProgress = useCallback(async (promptId: string) => {
+    try {
+      const response = await fetch(`${baseUrl}/history/${promptId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data);
+        return data;
+      }
+    } catch { return null; }
+  }, [baseUrl]);
+
+  useEffect(() => { checkConnection(); }, [checkConnection]);
+
+  return { status, systemInfo, history, checkConnection, queuePrompt, checkProgress };
+}
+
+================================================================================
+CREATE src/hooks/useOllama.ts
+================================================================================
+
+export function useOllama(baseUrl: string, logger: ReturnType<typeof useLogger>) {
+  const [status, setStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [models, setModels] = useState<string[]>([]);
+
+  const checkConnection = useCallback(async () => {
+    setStatus('checking');
+    try {
+      const response = await fetch(`${baseUrl}/api/tags`);
+      if (response.ok) {
+        const data = await response.json();
+        setStatus('connected');
+        setModels(data.models?.map((m: any) => m.name) || []);
+        logger.success('ollama', `Connected with ${data.models?.length || 0} models`);
+      } else throw new Error('Invalid response');
+    } catch {
+      setStatus('disconnected');
+      logger.error('ollama', 'Cannot connect to Ollama', `URL: ${baseUrl}`, 'Install Ollama from https://ollama.com and run: ollama serve');
+    }
+  }, [baseUrl, logger]);
+
+  const generate = useCallback(async (model: string, system: string, prompt: string) => {
+    try {
+      logger.info('ollama', 'Generating with Ollama...');
+      const response = await fetch(`${baseUrl}/api/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, system, prompt, stream: false })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      logger.success('ollama', 'Generation complete');
+      return data.response;
+    } catch (err: any) {
+      logger.error('ollama', 'Generation failed', err.message, 'Check Ollama is running and model is installed: ollama pull llama3.2');
+      throw err;
+    }
+  }, [baseUrl, logger]);
+
+  const generateCharacters = useCallback(async (projectName: string, projectDesc: string) => {
+    return generate(models[0] || 'llama3.2', OLLAMA_SYSTEM_PROMPT, `Project: ${projectName}\nDescription: ${projectDesc}\n\n${OLLAMA_CHARACTER_PROMPT}`);
+  }, [generate, models]);
+
+  const generateTranscript = useCallback(async (sceneDesc: string, characters: string[], style: string) => {
+    return generate(models[0] || 'llama3.2', OLLAMA_SYSTEM_PROMPT, `Scene: ${sceneDesc}\nCharacters: ${characters.join(', ')}\nStyle: ${style}\n\n${OLLAMA_TRANSCRIPT_PROMPT}`);
+  }, [generate, models]);
+
+  useEffect(() => { checkConnection(); }, [checkConnection]);
+
+  return { status, models, checkConnection, generate, generateCharacters, generateTranscript };
+}
+
+================================================================================
+CREATE src/hooks/useVoice.ts
+================================================================================
+
+export function useVoice() {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentLine, setCurrentLine] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadVoices = () => setVoices(window.speechSynthesis?.getVoices() || []);
+    loadVoices();
+    window.speechSynthesis?.addEventListener('voiceschanged', loadVoices);
+    return () => window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices);
+  }, []);
+
+  const findVoice = useCallback((profile: VoiceProfile): SpeechSynthesisVoice | null => {
+    const genderVoices = voices.filter(v => {
+      const name = v.name.toLowerCase();
+      if (profile.gender === 'female') return name.includes('female') || name.includes('woman') || name.includes('zira') || name.includes('samantha');
+      if (profile.gender === 'male') return name.includes('male') || name.includes('man') || name.includes('david') || name.includes('daniel');
+      return true;
+    });
+    return genderVoices[0] || voices[0] || null;
+  }, [voices]);
+
+  const speak = useCallback((text: string, profile: VoiceProfile, emotion: Emotion = 'neutral') => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = findVoice(profile);
+    if (voice) utterance.voice = voice;
+    const mods = EMOTION_MODIFIERS[emotion] || EMOTION_MODIFIERS.neutral;
+    utterance.pitch = Math.max(0.1, Math.min(2, profile.pitch + (mods.pitchShift * 0.1)));
+    utterance.rate = Math.max(0.1, Math.min(10, profile.speed * mods.speedMultiplier));
+    utterance.volume = Math.max(0, Math.min(1, 1 + (mods.volumeDb * 0.1)));
+    utterance.onstart = () => { setIsPlaying(true); setCurrentLine(text); };
+    utterance.onend = () => { setIsPlaying(false); setCurrentLine(null); };
+    window.speechSynthesis.speak(utterance);
+  }, [findVoice]);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    setIsPlaying(false);
+    setCurrentLine(null);
+  }, []);
+
+  return { voices, isPlaying, currentLine, speak, stop, findVoice };
+}
+
+================================================================================
+NOW CREATE src/App.tsx WITH ALL COMPONENTS
+================================================================================
+
+The App.tsx should include:
+1. Main App component with state management for projects, current project, active tab
+2. Auto-save to localStorage on every state change
+3. Tabs: Dashboard, Projects, Characters, Episodes, Transcript, Voice, Settings, Guide, Logs
+
+COMPONENTS TO INCLUDE IN App.tsx (as internal components or separate files):
+
+Dashboard Component:
+- Connection status cards for ComfyUI and Ollama
+- Quick stats (projects count, total scenes, etc.)
+- Hardware info display
+- Quick action buttons
+
+ProjectList Component:
+- Grid of project cards
+- Each card shows name, style, character count, episode count
+- Create new project modal with name, description, style selection
+- Import/Export project buttons
+
+CharacterManager Component:
+- List of characters with avatar placeholders
+- Character editor with fields: name, appearance, personality, role, consistency prompt
+- Voice Profile section per character showing: gender, age, tone, pitch, speed
+- VoiceSelector sub-component for choosing voice presets
+- AI Generate button that calls Ollama
+- Play sample button to preview voice
+
+EpisodeManager Component:
+- Episode list with expand/collapse
+- Scene cards within each episode
+- Scene editor: description, camera, mood, characters, duration
+- Generate button per scene
+- Generate All button for batch
+- Export batch script button
+- AI Story button for auto-generating scenes
+
+TranscriptEditor Component:
+- Header with episode selector, AI Generate button, Export dropdown
+- Character voice summary bar showing assigned voices
+- Timeline-based scene sections
+- DialogueLine component for each line with:
+  - Character selector dropdown
+  - Text input (textarea)
+  - Emotion selector (colored badges)
+  - Timing controls (start/end frame or time)
+  - Voice settings panel (pitch, speed, volume, reverb sliders)
+  - Play/Stop voice preview button
+  - Notes field
+  - Delete button
+- Add line button between/after lines
+- Stats footer: total duration, word count, line count
+- Export options: SRT, VTT, ASS formats
+
+VoiceSettings Component:
+- Voice provider selector (Browser, ElevenLabs, Azure, Google, Local)
+- Voice list filtered by gender
+- Preview text input
+- Play/Stop controls
+- Character-voice mapping table
+
+Settings Component:
+- Resolution presets (Ultra Fast to Maximum)
+- Custom width/height inputs
+- FPS selector (12, 24, 30)
+- Steps slider (4-32)
+- CFG Scale slider (1-10)
+- Sampler dropdown
+- Scheduler dropdown
+- Model type toggle (GGUF/Checkpoint)
+- Model file inputs (model, VAE, CLIP)
+- ComfyUI URL input
+- Ollama URL input
+- Test connection buttons
+
+Guide Component:
+- Setup instructions organized in tabs/sections
+- Model download links
+- Troubleshooting FAQ
+
+LogPanel Component:
+- Log list with color-coded entries
+- Filter by category and level
+- Clear and Export buttons
+- Expandable details/solutions
+
+STYLING REQUIREMENTS:
+- Dark theme (bg-dark-950, text-dark-100)
+- Primary blue accents for interactive elements
+- Purple/pink accent for AI features
+- Green for success, red for errors, yellow for warnings
+- Rounded corners (rounded-lg)
+- Smooth transitions (transition-all duration-200)
+- Card backgrounds (bg-dark-800/50 border border-dark-700)
+- Hover effects (hover:bg-dark-700/50)
+- Responsive grid layouts
+- Proper spacing with Tailwind gap/padding
+
+IMPORTANT IMPLEMENTATION DETAILS:
+1. All IDs generated with generateId()
+2. Projects auto-save to localStorage
+3. Every API call wrapped in try/catch with logger messages
+4. Character voice profiles persist with character data
+5. Dialogue lines store timing in both frame and seconds
+6. Emotion affects voice pitch/speed/volume automatically
+7. Export generates valid SRT/VTT format
+8. Transcript can be generated per-scene or full episode
+9. Voice preview uses browser SpeechSynthesis API
+10. All components handle empty states gracefully
+
+After creating all files, run: npm run build
+
+Verify no TypeScript errors and the build completes successfully.
+
+================================================================================
+PROMPT ENDS HERE
+================================================================================
+
+## NOTES FOR THE AI AGENT:
+
+If the build fails, common fixes:
+1. Missing imports: Add `import { useState, useEffect, useCallback } from 'react'`
+2. Missing type imports: Types are in src/types.ts - import as needed
+3. Tailwind not working: Ensure index.css has @tailwind directives
+4. SpeechSynthesis errors: Add null checks for browser API
+
+## EXPECTED OUTPUT:
+- A fully functional React application
+- Dark themed UI with anime aesthetic
+- Project management with localStorage persistence
+- Character management with voice profiles
+- Episode and scene management
+- Transcript editor with voice preview
+- ComfyUI workflow generation
+- Ollama AI integration
+- Export capabilities (JSON, SRT, VTT, batch scripts)
+- Comprehensive logging system
+
+## BUILD VERIFICATION:
+After the AI agent finishes, verify:
+1. `npm run build` completes without errors
+2. No TypeScript errors in the console
+3. All components render correctly
+4. localStorage saves/loads properly
+
+Good luck! 🎬🎤
